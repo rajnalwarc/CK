@@ -1,0 +1,141 @@
+---
+## 1wnload and install RStudio and then build R Markdown Notebooks to execute your code and organize your output into a readable report.
+title: "R Notebook" 
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+plot(cars)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+## 3 Follow this tutorial on applying kNN to prostate cancer detection and implement all of the steps in an R Notebook. Make sure to explain each step and what it does. (Note: The data set provided as part of this assignment has been slightly modified from the one used in the tutorial, so small deviations in the result can be expected.)
+
+## 2 data set for tutorial
+setwd("C:/Users/CK/Documents/Intro to Data Mining and Machine Learning") 
+### Using above command, we've imported the 'prostate_Cancer.csv' data file. This command is used to point to the folder containing the required file. 
+ 
+prc<- read.csv("prostate_cancer.csv", stringsAsFactors = FALSE )
+### Above command helps us to import the required data set and saves it to the prc data frame.
+### stringsAsFactors = FALSE   #This command helps to convert every character vector to a factor wherever it makes sense.
+
+str(prc)
+
+## Above command to see whether the data is structured or not
+
+prc<- prc[-1]
+## this removes the first variable
+
+head(prc)
+
+table(prc$diagnosis_result)
+## above command helps us to get the numver of patients
+
+prc$diagnosis <- factor(prc$diagnosis_result, levels = c("B", "M"), labels = c("Benign", "Malignant"))
+
+round(prop.table(table(prc$diagnosis)) * 100, digits = 1) 
+## above command gives the result in percentage or rounded to 1 decimal place
+
+normalize <- function(x) {
+return ((x - min(x)) / (max(x) - min(x))) }
+## above command is used to normalize the data
+prc_norm <- as.data.frame(lapply(prc[2:9], normalize))
+
+summary(prc_norm$radius)
+## to see whether the data is normalized or not
+
+prc_train <- prc_norm[1:65,]
+prc_test <- prc_norm[66:100,]
+## above commands used to create the testing and training data set
+
+prc_train_labels <- prc[1:65, 1]
+prc_test_labels <- prc[66:100, 1] 
+
+##This code takes the diagnosis factor in column 1 of the prc data frame and on turn creates prc_train_labels and prc_test_labels data frame.
+
+install.packages("class")
+library(class)
+# installing package class to use knn function
+
+prc_test_pred <- knn(train = prc_train, test = prc_test,cl = prc_train_labels, k=10)
+### knn() returns a factor value of predicted labels for each of the examples in the test data set which is then assigned to the data frame prc_test_pred
+
+library(gmodels)
+## installing gmodels 
+CrossTable(x=prc_test_labels, y=prc_test_pred, prop.chisq=FALSE)
+## crosstable used to check the accuracy of the predicted values in prc_test_pred
+
+prc_test_pred1 <- knn(train = prc_train, test = prc_test,cl = prc_train_labels, k=8)
+
+library(gmodels)
+
+CrossTable(x=prc_test_labels, y=prc_test_pred1, prop.chisq=FALSE)
+## for k=8 the accuracy increased
+prc_test_pred2 <- knn(train = prc_train, test = prc_test,cl = prc_train_labels, k=7)
+
+library(gmodels)
+
+CrossTable(x=prc_test_labels, y=prc_test_pred2, prop.chisq=FALSE)
+## k=7 accuaracy again increased
+prc_test_pred3 <- knn(train = prc_train, test = prc_test,cl = prc_train_labels, k=6)
+
+library(gmodels)
+
+CrossTable(x=prc_test_labels, y=prc_test_pred3, prop.chisq=FALSE)
+## accuracy sames as k=7
+prc_test_pred4 <- knn(train = prc_train, test = prc_test,cl = prc_train_labels, k=5)
+
+library(gmodels)
+
+KNN<-CrossTable(x=prc_test_labels, y=prc_test_pred4, prop.chisq=FALSE)
+KNN
+## accuracy deceased for k=5
+
+
+# 4 Once you've complete the tutorial, try another kNN implementation from another package, such as the caret package. Compare the accuracy of the two implementations.
+
+library(ISLR)
+library(caret)
+
+#Spliting the data as training and test set. Using createDataPartition() function from caret
+indxTrain <- createDataPartition(y = prc$diagnosis_result,p = 0.65,list = FALSE)
+training <- prc[indxTrain,]
+testing <- prc[-indxTrain,]
+
+##Checking distibution in origanl data and partitioned data
+prop.table(table(training$diagnosis_result)) * 100
+
+prop.table(table(testing$diagnosis_result)) * 100
+
+prop.table(table(prc$diagnosis_result)) * 100
+
+## choosing centring and scaling in caret to preprocess the data
+trainX <- training[,names(training) != "diagnosis_result"]
+preProcValues <- preProcess(x = trainX,method = c("center", "scale"))
+preProcValues
+
+## train and control
+
+set.seed(400)
+ctrl <- trainControl(method="repeatedcv",repeats = 3) #,classProbs=TRUE,summaryFunction = twoClassSummary)
+knnFit <- train(diagnosis_result ~ ., data = training, method = "knn", trControl = ctrl, preProcess = c("center","scale"), tuneLength = 10)
+
+knnFit
+## this plot yields the number of neighbors vs the Accuracy based on the repeated cross validation
+plot(knnFit)  
+
+### comparing accuaracy of the two implementations caret is better than class with the maximum accuaracy of 94.76% for k=5 than the maximum accuracy of 71.5% of class with k=7&6
+
+## 5 Try the confusionMatrix function from the caret package to determine the accuracy of both algorithms.
+knnPredict <- predict(knnFit,newdata = testing )
+# using the confusion matrix to see accuracy value and other parameter values
+confusionMatrix(knnPredict, testing$diagnosis_result )
+
+### by confusionmatrix we get the accuaracy of 91.18 % for caret package as compared to the 71.5 % of class package
