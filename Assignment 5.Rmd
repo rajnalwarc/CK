@@ -1,0 +1,226 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+plot(cars)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+```{r}
+#Bank Loan Decision Tree Example
+#Reading the file from directory
+credit <- read.csv("C:/Users/CK/Documents/Intro to Data Mining and Machine Learning/credit.csv")
+credit
+
+# structure of the bank loan
+str(credit)
+
+# The applicant's checking and savings account balance are recorded as categorical variables
+table(credit$checking_balance)
+
+table(credit$savings_balance)
+
+# By following command we can see  how many applicants are in default state
+table(credit$default)
+
+# sample() function to select 900 values at random out of the sequence of integers from 1 to 1000.
+set.seed(123)
+train_sample <- sample(1000, 900)
+
+# by follwoing command we can see that resulting vector is a combination of random 900 integers
+
+str(train_sample)
+
+# splitting dataset into training and test 
+
+credit_train <- credit[train_sample, ]
+credit_test <- credit[-train_sample, ]
+
+# following command verifies whether the data split fairly by seeing number defaults in training and test datasets
+
+prop.table(table(credit_train$default))
+prop.table(table(credit_test$default))
+
+# Training a model on the data
+# installing C50 package
+
+install.packages("C50")
+library(C50)
+# using C.50 algorithm credit model contains decision tree and we can see some basic data
+credit_train$default <-as.factor(credit_train$default)
+credit_model <- C5.0(credit_train[-17], credit_train$default)
+credit_model
+
+# to see the tree's decision
+
+summary(credit_model)
+
+# evaluating model performance
+
+# To apply our decision tree to the test dataset, we use the predict() function,as shown in the following line of code
+
+credit_pred <- predict(credit_model, credit_test)
+
+library(gmodels)
+
+# Setting theprop.c and prop.r parameters to FALSE removes the column and row percentages from the table
+ 
+CrossTable(credit_test$default, credit_pred,
+             prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE,
+             dnn = c('actual default', 'predicted default'))
+
+# Improving model performance
+
+credit_boost10 <- C5.0(credit_train[-17], credit_train$default,
+                       trials = 10)
+credit_boost10
+
+# here some additional lines are added, pointting towards change
+
+summary(credit_boost10)
+
+# to check whether we see improvement on the test data
+
+credit_boost_pred10 <- predict(credit_boost10, credit_test)
+CrossTable(credit_test$default, credit_boost_pred10,
+             prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE,
+             dnn = c('actual default', 'predicted default'))
+
+# designating cost matrix
+matrix_dimensions <- list(c("no", "yes"), c("no", "yes"))
+names(matrix_dimensions) <- c("predicted", "actual")
+
+# examining new object
+matrix_dimensions
+
+# Suppose we believe that a loan default costs the bank four times as much as a missed opportunity Our penalty values could then be defined as
+
+error_cost <- matrix(c(0, 1, 4, 0), nrow = 2,
+                     dimnames = matrix_dimensions)
+error_cost
+
+error_cost <- matrix(c(0, 1, 4, 0), nrow = 2)
+error_cost
+# To see how above impacts classification, let's apply it to our decision tree using the costs parameter of the C5.0() function.
+library(C50)
+credit_cost <- C5.0(credit_train[-17], credit_train$default,
+                    costs = error_cost)
+
+credit_cost_pred <- predict(credit_cost, credit_test)
+library(gmodels)
+CrossTable(credit_test$default, credit_cost_pred,
+           prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE,
+           dnn = c('actual default', 'predicted default'))
+           
+```
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+```{r}
+# PRoblem 2 
+#Identifying poisonous mushrooms with rule learners   
+# prepare the data
+mushrooms <- read.csv("C:/Users/CK/Documents/Intro to Data Mining and Machine Learning/mushrooms.csv", stringsAsFactors = TRUE)
+mushrooms
+str(mushrooms)             
+
+# dropping veil$type variable 
+
+mushrooms$veil_type <- NULL
+
+# distribution of the mushroom type class variable in our dataset
+
+table(mushrooms$type)
+
+# training a model on the data
+
+install.packages("RWeka")
+library(RWeka)
+
+# Using the type ~ . formula, we will allow our first OneR() rule learner to consider all the possible features in the mushroom data while constructing its rules to predict type
+
+mushroom_1R <- OneR(type ~ ., data = mushrooms)
+mushroom_1R
+
+
+# Evaluating model performance
+# getting additional details
+summary(mushroom_1R)
+
+
+# Improving model performance
+
+# Let's train the JRip() rule learner as we did with OneR(), allowing it to choose rules from all the available features
+
+mushroom_JRip <- JRip(type ~ ., data = mushrooms)
+mushroom_JRip 
+
+
+
+```
+
+```{r}
+# Problem 3
+# KNN
+#KNN comes under the category of "Lazy Learner" approaches.
+#KNN determines neighborhoods, so there must be a distance metric. This implies that all features must be numeric. Distance metrics may be effected by varying scales between attributes and also high-dimensional space.
+#To favour kNN, use two dimensional data and draw a broad spiral pattern of 1s in a background of 0s, with about equal numbers of 0s or 1s. The right answer is whether you are on a 0 or a 1.
+#kNN will certainly take up more memory at the time you are making decisions, as you have to remember all the instances instead of boiling them down into weights and tree rules.
+
+
+# Decision tree
+# To favour decision trees, have only a few attributes determine the correct answer, with all the others useless distractions.
+#Decision Trees are very flexible, easy to understand, and easy to debug. They will work with classification problems and regression problems. So if you are trying to predict a categorical value like (red, green, up, down) or if you are trying to predict a continuous value like 2.9, 3.4 etc Decision Trees will handle both problems
+#I would add that decision trees can be used for both classification and regression tasks. DT on the other hand predicts a class in the accepted answer would be more specific by describing Classification trees which is technically a subtype of the generic DT concept.
+#
+
+
+# Naive Bayes
+
+#Naive Bayes requires you build a classification by hand. There's not way to just toss a bunch of tabular data at it and have it pick the best features it will use to classify. Picking which features matter is up to you. 
+
+#If there were a way for Naive Bayes to pick features you'd be getting close to using the same techniques that make decision trees work like that. Give this fact that means you may need to combine Naive Bayes with other statistical techniques to help guide you towards what features best classify and that could be using decision trees. Naive bayes will answer as a continuous classifier.
+
+#There are techniques to adapt it to categorical prediction however they will answer in terms of probabilities like (A 90%, B 5%, C 2.5% D 2.5%) Bayes can perform quite well, and it doesn't over fit nearly as much so there is no need to prune or process the network. That makes them simpler algorithms to implement. However, they are harder to debug and understand because it's all probabilities getting multiplied 1000's of times so you have to be careful to test it's doing what you expect. Naive bayes does quite well when the training data doesn't contain all possibilities so it can be very good with low amounts of data. Decision trees work better with lots of data compared to Naive Bayes.
+
+# Comparision
+
+# Decisions trees will pick the best features for you from tabular data. kNN will certainly take up more memory at the time you are making decisions, as you have to remember all the instances instead of boiling them down into weights and tree rules. I would also expect it to take more time at decision time, although there are libraries to attempt to speed this up. Naive Bayes is probably the fastest and smallest. 
+
+# If you are dicing between using decision trees vs naive bayes to solve a problem often times it best to test each one. Build a decision tree and build a naive bayes classifier then have a shoot out using the training and validation data you have. Which ever performs best will more likely perform better in the field. And it's always a good idea to cast each of those against K-nearest neighbor (KNN) predictors because k-nearest has been shown to out perform both of them in some situations, and KNN is a simple algorithm to implement and use. If KNN performs better than the other two go with it.
+
+# Ripper 
+# RIPPER, is an inductive rule learner. This algorithm generated a detection model composed of resource rules that was built to detect future examples of malicious executables. This algorithm used libBFD information as features.
+
+# RIPPER is a rule-based learner that builds a set of rules that identify the classes while minimizing the amount of error. The error is defined by the number of training examples misclassified by the rules. 
+```
+```{r}
+# Problem 4
+
+#All three are so-called "meta-algorithms": approaches to combine several machine learning techniques into one predictive model in order to decrease the variance (bagging), bias (boosting) or improving the predictive force (stacking alias ensemble). ---(Reference-https://stats.stackexchange.com/questions/18891/bagging-boosting-and-stacking-in-machine-learning)
+
+# Bagging-Bagging (stands for Bootstrap Aggregation) is the way decrease the variance of your prediction by generating additional data for training from your original dataset using combinations with repetitions to produce multisets of the same cardinality/size as your original data. By increasing the size of your training set you can't improve the model predictive force, but just decrease the variance, narrowly tuning the prediction to expected outcome. (https://stats.stackexchange.com/questions/18891/bagging-boosting-and-stacking-in-machine-learning)
+
+# Boosting is a two-step approach, where one first uses subsets of the original data to produce a series of averagely performing models and then "boosts" their performance by combining them together using a particular cost function (=majority vote). Unlike bagging, in the classical boosting the subset creation is not random and depends upon the performance of the previous models: every new subsets contains the elements that were (likely to be) misclassified by previous models. (Reference-https://stats.stackexchange.com/questions/18891/bagging-boosting-and-stacking-in-machine-learning)
+
+# Stacking is a similar to boosting: you also apply several models to your original data. The difference here is, however, that you don't have just an empirical formula for your weight function, rather you introduce a meta-level and use another model/approach to estimate the input together with outputs of every model to estimate the weights or, in other words, to determine what models perform well and what badly given these input data. (Reference-https://stats.stackexchange.com/questions/18891/bagging-boosting-and-stacking-in-machine-learning)
+
+# To predict the class of new data we only need to apply the N learners to the new observations. In Bagging the result is obtained by averaging the responses of the N learners (or majority vote). However, Boosting assigns a second set of weights, this time for the N classifiers, in order to take a weighted average of their estimates. (Ref-https://quantdare.com/what-is-the-difference-between-bagging-and-boosting/)
+
+# In the Boosting training stage, the algorithm allocates weights to each resulting model. A learner with good a classification result on the training data will be assigned a higher weight than a poor one. So when evaluating a new learner, Boosting needs to keep track of learners' errors, too. ((Ref-https://quantdare.com/what-is-the-difference-between-bagging-and-boosting/))
+
+# Which is best?
+#There's not an outright winner; it depends on the data, the simulation and the circumstances.Bagging and Boosting decrease the variance of your single estimate as they combine several estimates from different models. So the result may be a model with higher stability.
+
+#If the problem is that the single model gets a very low performance, Bagging will rarely get a better bias. However, Boosting could generate a combined model with lower errors as it optimises the advantages and reduces pitfalls of the single model.
+
+#By contrast, if the difficulty of the single model is over-fitting, then Bagging is the best option. Boosting for its part doesn't help to avoid over-fitting; in fact, this technique is faced with this problem itself. For this reason, Bagging is effective more often than Boosting. (Ref-https://quantdare.com/what-is-the-difference-between-bagging-and-boosting/)
+
+
+```
+
