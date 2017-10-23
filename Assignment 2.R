@@ -1,0 +1,119 @@
+
+# chandrakiran Rajnalwar / NUID=001230018
+data("USArrests")
+USArrests
+
+#1 The built-in dataset USArrests contains statistics about violent crime rates in the US States. Determine which states are outliers in terms of assaults. Outliers, for the sake of this question, are defined as values that are more than 1.5 standard deviations from the mean.
+
+B<- USArrests$Assault #assigning value to data  
+
+a<- mean(USArrests$Assault) # mean of the assaulut column in B
+a
+
+sd<-sd(USArrests$Assault)  # standard deviation for assault column
+sd
+
+z<- a-B  #numerator for the Z function
+z
+
+x<- z/sd # denominator for Z function
+x
+
+o<-  which(x>1.5) # outliers for assalut in USArrests dataset
+o
+o<-which(x<1.5)
+o
+
+
+# 2 For the same dataset as in (1), is there a correlation between murder and assault, i.e., as one goes up, does the other statistic as well? Comment on the strength of the correlation. Calculate the Pearson coefficient of correlation in R.
+cor.test(USArrests$Murder,USArrests$Assault, method = "pearson")
+
+
+#3 Based on the data on the growth of mobile phone use in Brazil (you'll need to copy the data and create a CSV that you can load into R), forecast phone use for 2017 using a simple moving average, a 3-year weighted moving average (with weights of 4 for the most recent year, and 1 for the others), exponential smoothing (alpha of 0.2), and linear regression trendline.
+Mydata<- read.csv("Mydata.csv")
+Mydata
+n<- nrow(Mydata)
+n
+last <- Mydata[n:(n-3),2]  #defining last 4 latest rows
+
+S<-mean(last)
+
+#wighted moving average
+w<- c(6,2,1) # weight assigned to last 3 rows
+
+tail(Mydata) # last rows of column
+
+sw<- w*last # multiplication of the assigned weight to subscribers column
+sw
+
+Av<- sum(sw)/sum(w) #weighted average
+Av
+
+#exponential smoothing
+#alpha=.2
+
+Mydata$Ft <- 0 # assigning forecast as Ft and error as E
+Mydata$E <- 0
+Mydata
+
+Mydata$Ft[1]< Mydata[1,2]
+head(Mydata)
+c<- 0.2
+Mydata$Ft[2]<-Mydata$Ft[1] + c*Mydata$E[1]
+Mydata$E[2]<-Mydata[2,2]-Mydata$Ft[2]
+for (i in 2:nrow(Mydata)){
+  Mydata$Ft[i]<-Mydata$Ft[i-1] + c*Mydata$E[i-1]
+  Mydata$E[i]<-Mydata[i,2] - Mydata$Ft[i]
+}
+head(Mydata)
+
+d<-nrow(Mydata)
+
+F.ex<-Mydata$Ft[d]+ c*Mydata$E[d]
+F.ex
+  
+# linear regression trendline
+  ggplot(Mydata,aes(Subscribers, Year))+ geom_line()  
+  model<- lm(Mydata$Subscribers~Mydata$Year)
+  summary(model)
+  
+  model
+  F.t<- -3.66e+10 = (1.828e+07*2017)
+  
+  # 4 Calculate the average absolute error for each model, i.e., use the model to calculate a forecast for each given time period and then the error.
+  
+  Mydata<-Mydata[,c(1,2)]   # selecting  the first 2 rows of data set. 
+  Mydata$Av<- 0    # adding columns in data setsz
+  Mydata$AE<- 0 
+  
+  d1<-nrow(Mydata)  # total number of rows
+  
+  w2<-c(4,1,1) # assigning weights
+  
+  for(i in (d1-7):d1)
+  {
+  last3<- Mydata[(i-1) : (i-3),2] 
+  sw<-last*w2
+  Mydata$Av[i]<-sum(sw) / sum(w2)
+  
+  Mydata$AE[i]<-abs(Mydata[i,2] - Mydata$Av[i])
+  }
+  Mydata
+  
+  #  linear regression trendline
+  
+  ggplot(Mydata,aes(Subscribers, Year))+ geom_line()  
+  model<- lm(Mydata$Subscribers~Mydata$Year)
+  summary(model)
+  
+  model
+  F.t<- -3.66e+10 = (1.828e+07*2017)
+  
+  # 5 Which model has the smallest mean absolute error (MAD)? 
+  
+  # Ans > The linear regression model has the smallest error as per calculated
+  
+  # 6 Calculate an average forecast by averaging out the three forecasts calculated in (3).
+  
+  avg_forecast<- (mean(last)+S+ F.ex)/3
+  avg_forecast
