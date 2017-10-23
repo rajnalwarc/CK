@@ -1,0 +1,256 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+plot(cars)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+# problem 1
+set.seed(5574)
+sms_raw<-sms_spam
+sms_raw <- read.csv("C:/Users/CK/Documents/Intro to Data Mining and Machine Learning/sms_spam.csv", stringsAsFactors = FALSE)
+sms_raw
+# by using str we will know the number of messages in data frame and also the type of the SMs
+str(sms_raw)
+
+# we are assigning variable type as factor
+sms_raw$type <- factor(sms_raw$type)
+sms_raw$type
+
+# we will check with following functions whether factor is assigned or not
+str(sms_raw$type)
+table(sms_raw$type)
+
+# calling the library tm to create corpus
+install.packages("tm")
+library(tm)
+sms_corpus <- VCorpus(VectorSource(sms_raw$text))
+# here we can see that all of the SMS messages are in training data set
+print(sms_corpus)
+
+# following command allows us to see the summary of first three messages. 
+inspect(sms_corpus[1:3])
+
+# following command allows us to view the whole message text
+as.character(sms_corpus[[1]])
+
+# here lapply command applied as.character function to a subset of elements 
+lapply(sms_corpus[1:2], as.character)
+
+# here we use tm_map to clean up our corpus and then apply tolower function to transform uppercase to lowercase letter and content_tranformer is wrapper function
+
+sms_corpus_clean <- tm_map(sms_corpus,
+                           content_transformer(tolower))
+as.character(sms_corpus[[1]])
+as.character(sms_corpus_clean[[1]])
+
+# by above command we can see whether the changes occured or not
+
+# by following command we will continue cleaning by removing numbers
+sms_corpus_clean <- tm_map(sms_corpus_clean, removeNumbers)
+
+# here stopwords function will remove the filler words 
+sms_corpus_clean <- tm_map(sms_corpus_clean,
+                           removeWords, stopwords())
+
+# removepunctuation removes the punctuatio, here we have created a function in order to avoid consequences
+
+replacePunctuation <- function(x) {
+  gsub("[[:punct:]]+", " ", x)
+}
+sms_corpus_clean <- tm_map(sms_corpus_clean, removePunctuation)
+
+# installing package snowballc
+install.packages("SnowballC")
+library(SnowballC)
+
+# wordstem function returns same vector of terms in it's root form
+wordStem(c("learn", "learned", "learning", "learns"))
+
+# to apply wordstem to entire document we use tm_map and stemdocument function
+sms_corpus_clean <- tm_map(sms_corpus_clean, stemDocument)
+
+# stripwhitespace remove the additional whitespace
+sms_corpus_clean <- tm_map(sms_corpus_clean, stripWhitespace)
+
+#
+as.character(sms_corpus[1:3])
+as.character(sms_corpus_clean[1:3])
+
+# here DTM created
+sms_dtm <- DocumentTermMatrix(sms_corpus_clean)
+
+# following command gives dtm with all the above provess we have done till now
+sms_dtm2 <- DocumentTermMatrix(sms_corpus, control = list(
+  tolower = TRUE,
+  removeNumbers = TRUE,
+  stopwords = TRUE,
+  removePunctuation = TRUE,
+  stemming = TRUE
+))
+
+# by running both dtm we can see difference in both the dtm
+sms_dtm
+sms_dtm2
+
+# data preparation by creating training and test data sets
+sms_dtm_train <- sms_dtm[1:4169, ]
+sms_dtm_test <- sms_dtm[4170:5574, ]
+
+# creating labels from sms_raw
+sms_train_labels <- sms_raw[1:4169, ]$type
+sms_test_labels <- sms_raw[4170:5574, ]$type
+
+# to check proportion of the spam in training and test data set
+prop.table(table(sms_train_labels))
+prop.table(table(sms_test_labels))
+
+# visualizing text data
+install.packages("wordcloud")
+library(wordcloud)
+# wordcloud is used to visualize the data in SMS text messages
+
+# Following syntax will give cloud of words and it will be in nonrandomed order
+wordcloud(sms_corpus_clean, min.freq = 50, random.order = FALSE)
+
+# here subset is used to for message type spam
+spam <- subset(sms_raw, type == "spam")
+ham <- subset(sms_raw, type == "ham")
+
+# now use wordcloud for separate spam and ham texts with maximum words set to 40 and scale used for font size 
+wordcloud(spam$text, max.words = 40, scale = c(3, 0.5))
+wordcloud(ham$text, max.words = 40, scale = c(3, 0.5))
+
+# following command gives the words atleast appearing 5 times
+sms_freq_words <- findFreqTerms(sms_dtm_train, 5)
+
+# by following command we will see the frequent words
+str(sms_freq_words)
+
+# we want the columns only from sms_freq_words
+sms_dtm_freq_train<- sms_dtm_train[ , sms_freq_words]
+sms_dtm_freq_test <- sms_dtm_test[ , sms_freq_words]
+
+# following command is to convert the counts of words from sparse matrix tpo yes or no
+convert_counts <- function(x) {
+  x <- ifelse(x > 0, "Yes", "No")
+}
+
+# here apply function to specify the rows or column
+sms_train <- apply(sms_dtm_freq_train, MARGIN = 2,
+                   convert_counts)
+sms_test <- apply(sms_dtm_freq_test, MARGIN = 2,
+                    convert_counts)
+# installing package to perform naivebayes classification
+install.packages("e1071")
+library(e1071)
+# assigning model 
+sms_classifier <- naiveBayes(sms_train, sms_train_labels)
+
+# predicting the  model
+sms_test_pred <- predict(sms_classifier, sms_test)
+sms_test_pred
+# now load library gmodels
+
+library(gmodels)
+# crosstable function used to compare the original values to predicted values
+
+CrossTable(sms_test_pred, sms_test_labels,
+             prop.chisq = FALSE, prop.t = FALSE,
+             dnn = c('predicted', 'actual'))
+
+
+# improving model using laplace
+sms_classifier2 <- naiveBayes(sms_train, sms_train_labels,
+                              laplace = 1)
+
+sms_test_pred2 <- predict(sms_classifier2, sms_test)
+
+CrossTable(sms_test_pred2, sms_test_labels,
+           prop.chisq = FALSE, prop.t = FALSE, prop.r = FALSE,
+           dnn = c('predicted', 'actual'))
+# here we can see the number of ham messages that were wrongly classified as spam came down to 7 from 9           
+           
+# problem 2           
+install.packages(klaR)
+library(klaR)
+data(iris)
+
+#nrow(iris)
+#summary(iris)
+head(iris)
+
+# identify indexes to be in testing dataset
+# every index of 5th, 10th, 15th .. will be the testing dataset
+# the rest are training dataset
+testidx <- which(1:length(iris[, 1]) %% 5 == 0)
+
+# separate into training and testing datasets
+iristrain <- iris[-testidx,]
+iristest <- iris[testidx,]
+
+# apply Naive Bayes
+nbmodel <- NaiveBayes(Species~., data=iristrain)
+
+# check the accuracy
+prediction <- predict(nbmodel, iristest[,-5])
+table(prediction$class, iristest[,5])
+
+# problem 2.1
+#here using bayes rule predict the conditional probabilities of categorical class of independent predictor variable here we can take example
+#predict(obj, ndata, threshold=.001,...)
+#here;
+#obj= a object of the class "naiveBayes"
+#ndata=dataframe with new predictors
+#threshold= values replacing cells with 0 probabilities
+#... = passing to dkernel function if it's necessary
+#Here the standard naive Bayes classifier for this assumes independence of the predictor variables. 
+# For attributes with missing values, the corresponding table entries are omitted for prediction.
+  
+#predict(object, newdata, quick = FALSE, detail = FALSE, ...)
+
+###problem 2.2
+#The NaiveBayes implementation in klaR for numeric predictor variables calculates the mean and standard deviations of the predictor variable at each outcome level. klaR authors decided to throw an error instead of dealing with standard deviations of 0
+#So converting numeric variable to a factor is one option.
+
+#Alternatively, from the e1071 package, naiveBayes function will return distributions with a standard deviation of 0 if we want that over throwing errors, or you can delete the stop(...) code towards the end of klaR:::NaiveBayes.default which will ultimately cause problems with the predictions and plotting function in klaR package
+#Here as stated above bayes rule predict the conditional probabilities of categorical class of independent predictor variable 
+## S3 method for class 'formula' 
+#NaiveBayes(formula, data, ..., subset, na.action = na.pass) 
+## Default S3 method:
+# NaiveBayes(x, grouping, prior, usekernel = FALSE, fL = 0, ...) 
+
+### Problem 2.3
+# here use naivebayes 
+#NaiveBayes(x, grouping, prior, usekernel = FALSE, fL = 0, ...) 
+#fL Factor for Laplace correction, default factor is 0 so, no correction.
+
+
+#### problem 3
+
+#While using Laplace estimator, it specifically adds a small number to each of the counts in the frequency table ensureing that each feature has a nonzero probability of occurring with each class.Normally Laplace estimator is set to 1,
+#which confirms each class-feature combination is found in the data at least once. 
+#Example
+#Using the Naive Bayes Suppose that we received a message, containing all four terms: Viagra, Groceries, Money, and Unsubscribe
+# we can compute the likelihood of spam as: (4/20) * (10/20) * (0/20) * (12/20) * (20/100) = 0
+
+#The likelihood of ham is:(1/80) * (14/80) * (8/80) * (23/80) * (80/100) = 0.00005
+##SO,the probability of spam is: 0/(0 + 0.00005) = 0
+##The probability of ham is: 0.00005/(0 + 0. 0.00005) = 1
+##According to above results we can say that that the message contains spam with 0% probability and ham with 100% probability. This kind of prediction is not ideal. Here, message contains most of the words usually associated with spam, like Viagra, which is hardly used in legitimate messages. Therefore we can sat that  message has been incorrectly classified.
+
+#taking a Laplace value of 1, we add one to each numerator in the likelihood function. The total number of 1 values must also be added to each conditional probability denominator. 
+#likelihood of spam is therefore: (5/24) * (11/24) * (1/24) * (13/24) * (20/100) = 0.0004
+#The likelihood of ham is: (2/84) * (15/84) * (9/84) * (24/84) * (80/100) = 0.0001
+#So, probability of spam is 80%, and the probability of ham is 20%, which is a more possible result.
+
