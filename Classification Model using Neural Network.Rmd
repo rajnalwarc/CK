@@ -1,0 +1,125 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+plot(cars)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+```{r}
+
+ ### Problem 1 
+## part 1
+##To load data set and observe the features of it with data type.
+bank_full<- read.table(file="C:/Users/CK/Documents/Intro to Data Mining and Machine Learning/Practicum 3/bank-full.csv", sep=";", header = TRUE)
+str(bank_full)
+
+##To load data set and observe the features of it with data type.
+bank<- read.table(file="C:/Users/CK/Documents/Intro to Data Mining and Machine Learning/Practicum 3/bank.csv", sep=";", header = TRUE)
+str(bank)
+
+###Part 2 Exlporing the dataset
+### checking for NA values
+any(is.na(bank_full))
+
+table(bank$y)
+
+round(prop.table(table(bank_full$y)),2)
+##To subset char features and converting it to binary.
+char <- bank_full[c("job", "marital", "education", "default", "housing", "loan", "contact", "month", "poutcome")]
+library(ade4)   ##To use acm.disjonctif()
+conv <- acm.disjonctif(char)
+##To subset numeric features.
+a <- bank_full[c("age", "balance", "day", "duration", "campaign", "pdays", "previous")]
+##To create factor for target feature.
+y <- factor(bank_full$y)
+
+banktrial<- cbind(conv,a,y)
+str(banktrial)
+##3) Building a classification model with a svm that predicts if a bank customer will open a term deposit account.
+
+library(caret)
+library(psych)
+library(ggplot2)
+set.seed(123456)
+train_data <- createDataPartition(bank$y, p=0.70, list = FALSE)  
+
+## creating a training and testing data set.
+data_train <- bank[train_data,]
+data_test <-bank[-train_data,]
+
+## observing the fractions of table
+prop.table(table(data_train$y))
+nrow(data_train)
+
+prop.table(table(data_test$y))
+nrow(data_test)
+
+library(kernlab)
+set.seed(120)
+
+train_data <- createDataPartition(bank$y, p=0.70, list = FALSE)
+
+data_train <- bank[train_data,]
+data_test <-bank[-train_data,]
+
+svm<- train(y~., data = data_train,
+             method = "svmPoly",
+             trControl= trainControl(method = "cv", number = 10, repeats = 5),
+             tuneGrid = data.frame(degree = 1,scale = 1,C = 1))
+svm
+
+### part 4) Here now building classification model using a neural network that also predicts if a bank customer will open a term deposit account.
+set.seed(80)
+
+data_train <- bank[train_data,]
+data_test <-bank[-train_data,]
+
+neu_nw <- train(data_train[,-20], data_train$y, method = "nnet",
+                 trControl= trainControl(method = "cv", number = 10, repeats = 5))
+
+neu_nw
+
+
+### Part 5) Comparing the accuracy of the above models based on absolute accuracy and AUC.
+
+svm_model <-predict(svm, data_test, na.action = na.pass)
+confusionMatrix(svm_model, data_test$y)
+
+neu_nw_model <-predict(neu_nw, data_test, na.action = na.pass)
+confusionMatrix(neu_nw_model, data_test$y)
+```
+```{r}
+
+### Problem 2
+### Part 1
+Plant_Data<-  read.csv("C:/Users/CK/Documents/Intro to Data Mining and Machine Learning/Practicum 3/Plant_data.csv")
+Plant_Data
+
+str(Plant_Data)
+
+### part 3 
+
+### Part 4
+
+### Yes there are clusters in the data and we can segment the data into groups
+ 
+### Part 5 
+## visualizing the clusters with the help of scatterplots
+library(ggplot2)
+
+ggplot(Plant_Data, aes(x=Plants, y=Region)) + geom_point()
+
+
+
+
+```
+
